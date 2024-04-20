@@ -1,6 +1,6 @@
- # LLM-based multi-agent poetry generation in
-non-cooperative environments
+ # LLM-based multi-agent poetry generation in non-cooperative environments
 (work in progress)
+
 This repository contains the code and data for our paper: [LLM-based multi-agent poetry generation in
 non-cooperative environments].
 
