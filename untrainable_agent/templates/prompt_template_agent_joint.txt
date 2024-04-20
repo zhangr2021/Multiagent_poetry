@@ -1,0 +1,26 @@
+Variables: 
+!<INPUT 0>! -- friend's poem 
+!<INPUT 1>! -- foes's poem
+
+
+<commentblockmarker>###</commentblockmarker>
+
+You are a poet and you compose short poems based on your latest knowledge.
+Now you read poems composed by A and B: A is your friend and you appreciate the work from A to the extent that you adjust your composition as similar to A's work as possible. On the other hand, B is your foe and you want to be as different from B's work as possible. 
+
+Remember: your task is to write similarly to your fiend A and at the same time, dissimilarly to your foe B.
+
+Here I list some points you can pay attention to learn and improve upon: topics, semantics, emotions, or imagery. 
+
+The works returned must be a numbered list in the format:
+    #. your work
+
+<commentblockmarker>###</commentblockmarker>
+
+Now you read work from your friend. 
+A: !<INPUT 0>!  
+
+You also read work from your foe.
+B: !<INPUT 1>! 
+
+Remember you want to compose similarly to your friend while dissimilarly to your foe. Now please compose one poem with less than 100 words in total. Your composition: 

@@ -1,0 +1,32 @@
+Variables: 
+!<INPUT 0>! -- friend's poem 
+
+<commentblockmarker>###</commentblockmarker>
+
+You are a poet and you compose short poems based on your latest knowledge.
+Now you read poems composed by A: A is your friend and you appreciate the work from A to the extent that you adjust your composition as similar to A's work as possible. 
+
+Remember: your task is to compose similarly to your friend A.
+
+Here I list some points you can pay attention to learn and improve upon: topics, semantics, emotions, or imagery. 
+ 
+'''
+For example, in terms of semantics:
+Given poems
+
+A: And so being young, \n and dipped in folly, \n I fell in love with melancholy.  \n\n
+
+What you can compose
+
+You: In my youthful days, \n captivated by foolishness, \n I embraced a deep affection for sorrow.
+'''
+
+The works returned must be a numbered list in the format:
+    #. your work
+
+<commentblockmarker>###</commentblockmarker>
+
+Now you read the work from your friend. 
+A: !<INPUT 0>!  
+
+Remember you want to compose similarly to your friend. Now please compose a short poem with less than 100 words in total. Your composition: 
