@@ -18,48 +18,50 @@ from utils_agent_loop import *
 import json
 import gc
 
-print("I am continue training of round 6!")
 device = "cuda"
 gc.collect()
 torch.cuda.empty_cache()
 
 model_config = {"BATCH_SIZE": 64, "MAX_LEN": 128, "learning_rate": 1e-4, "eps": 1e-8, "RANDOM_SEED": 666,
-                "warmup_steps": 100, "EPOCHS": 5, "shuffle": True,
+                "EPOCHS": 3, "shuffle": True,
                 "masking": True,
-                "inference_alpha": 0.3, "inference_max_len": 50, "inference_topk": 20,
-                "negative_prompt":True,
-                "inference_greedy":False, "n_pairwise_inference_poems": 200,
+                "inference_alpha": 0,
+                "inference_max_len": 75, "inference_topk": 0, "inference_topp": 0.95,
+                "temperature": 1.5, "min_tokens_to_keep": 30,
+                "negative_prompt":False,
+                "inference_greedy":False, "n_pairwise_inference_poems": 300,
                 "dataset": "pretrain_quatrain",
-                 "base_model": "gpt2-medium",
+                 "base_model": "gpt2-medium", "base_loop": 720,
                 "home_directory": "/homes/rzhang/Multiagents_LLMs/gptlora/",
-                "output_directory": "/homes/rzhang/Multiagents_LLMs/gptlora/dataset/inference/",
+                "output_directory": "/homes/rzhang/Multiagents_LLMs/gptlora/dataset/inference_720/",
                 "additional_special_tokens": ['<negative>', '<positive>'],
                 "loss_fct": "CE",
                 "test_mode": False,
                 "prefix_train":False,
-                "n_loop":25}
-
+                "n_loop":5}
+print(model_config)
 test = model_config["test_mode"]
 home_directory = model_config["home_directory"]
 negative_prompt_ = model_config["negative_prompt"]
 masking = model_config["masking"]
-output_poems = model_config["output_directory"] + "neg_" + str(negative_prompt_) + "_masking_" + str(masking) + "/"
-output_dir = "model_loop/neg_" + str(negative_prompt_) + "_masking_" + str(masking) + "/"
+n_loop = model_config["n_loop"]
+output_poems = model_config["output_directory"] + "a" + str(model_config["inference_alpha"]) + "_neg_" + str(negative_prompt_) + "_masking_" + str(masking) + "/"
+output_dir = "model_loop/"+ str(model_config["base_loop"]) + "a" + str(model_config["inference_alpha"]) + "_masking_" + str(masking) + "/"
 for path in [output_poems, output_dir]:
     if not os.path.exists(path):
         os.makedirs(path)
 
-n_loop = model_config["n_loop"]
 if test:
-    n_loop = 2
+    n_loop = 1
     model_config["EPOCHS"] = 1
     model_config["n_pairwise_inference_poems"] = 1
     print("!!!Testing Mode!!!")
 
-for t in range(9, n_loop):
-
+for t in range(n_loop): #
     negative_prompt_ = model_config["negative_prompt"]
-
+    model_config["min_tokens_to_keep"] = min(50, int(model_config["min_tokens_to_keep"]*(1 + 0.1*t)))
+    print("min to keep:", model_config["min_tokens_to_keep"])
+    #model_config["temperature"] = model_config["temperature"] * (1 + 0.01 * t)
     ############################################generation loop#################################################
     generated = []
     for agent1, agent2 in zip([0, 1, 2, 3], [3, 2, 0, 1]):
@@ -68,8 +70,8 @@ for t in range(9, n_loop):
         print("Another agent pair here for generation:\n" + 100 * '-/', " t ===== ", t)
         print(100 * '-/')
         if t==0:
-            base_model_name1 = "init_model/" + "_".join(["agent", str(agent1), "round_0"]) + str(masking)
-            base_model_name2 = "init_model/" + "_".join(["agent", str(agent2), "round_0"]) + str(masking)
+            base_model_name1 = "init_model_" + str(model_config["base_loop"]) + "/" + "_".join(["agent", str(agent1), "round_0"]) + str(masking)
+            base_model_name2 = "init_model_" + str(model_config["base_loop"]) + "/" + "_".join(["agent", str(agent2), "round_0"]) + str(masking)
         else:
             base_model_name1 = output_dir + "_".join(["agent", str(agent1), "round", str(t)])
             base_model_name2 = output_dir + "_".join(["agent", str(agent2), "round", str(t)])
@@ -80,13 +82,17 @@ for t in range(9, n_loop):
         trained_model1, tokenizer1 = loop1.load_model(base_model=model_config["base_model"],
                                                       additional_special_tokens=model_config[
                                                           "additional_special_tokens"])
-
         loop2 = agent_loop(home_directory=model_config["home_directory"], model_name=base_model_name2,
                            target_df="", model_config=model_config, t=t,
                            output_dir="")
         trained_model2, tokenizer2 = loop2.load_model(base_model=model_config["base_model"],
                                                       additional_special_tokens=model_config[
                                                           "additional_special_tokens"])
+
+        if model_config["inference_alpha"] == 0:
+            print("Self-inference mode!")
+        else:
+            print("Pairwise-inference mode!")
 
         trained_model1.to(device)
         trained_model2.to(device)
@@ -120,7 +126,8 @@ for t in range(9, n_loop):
                 output_ids = redistribute_search(trained_model1, trained_model2, tokenizer1, model_inputs.input_ids, device = device,
                                                  alpha=model_config["inference_alpha"], max_len=model_config["inference_max_len"],
                                                  top_k=model_config["inference_topk"], greedy=model_config["inference_greedy"], negative_prompt_=negative_prompt_,
-                                                 nagetive_dict=negative_dict1)
+                                                 nagetive_dict=negative_dict1, top_p = model_config["inference_topp"], temperature = model_config["temperature"],
+                                                 min_tokens_to_keep = model_config["min_tokens_to_keep"])
                 output = tokenizer1.decode(output_ids.squeeze().tolist(), skip_special_tokens=False,)
                 if i % 30 == 0:
                     print(f"Generated text 1-2: {output}")
@@ -130,7 +137,9 @@ for t in range(9, n_loop):
                 output_ids = redistribute_search(trained_model2, trained_model1, tokenizer2, model_inputs.input_ids, device = device,
                                                  alpha=model_config["inference_alpha"], max_len=model_config["inference_max_len"],
                                                  top_k=model_config["inference_topk"], greedy=model_config["inference_greedy"],
-                                                 negative_prompt_=negative_prompt_, nagetive_dict=negative_dict2)
+                                                 negative_prompt_=negative_prompt_, nagetive_dict=negative_dict2, top_p = model_config["inference_topp"],
+                                                 temperature = model_config["temperature"],
+                                                 min_tokens_to_keep = model_config["min_tokens_to_keep"])
                 output = tokenizer2.decode(output_ids.squeeze().tolist(), skip_special_tokens=False)
                 if i % 30 == 0:
                     print(f"Generated text 2-1: {output}")
@@ -142,9 +151,7 @@ for t in range(9, n_loop):
 
         pd.DataFrame(generated, columns=["stanza", "agent"]).to_csv(
             output_poems + "inference_" + str(t) + ".csv", index=False)
-
     ############################################training loop#################################################
-
     mode_train = True
     for agent in range(4):
         "dataset0 --> model1"
@@ -152,12 +159,19 @@ for t in range(9, n_loop):
         print(100 * '-/')
 
         if t == 0:
-            base_model_name = "init_model/" + "_".join(["agent", str(agent), "round_0"]) + str(masking)
+            base_model_name = "init_model_" + str(model_config["base_loop"]) + "/" + "_".join(["agent", str(agent), "round_0"]) + str(masking)
         else:
             base_model_name = output_dir + "_".join(["agent", str(agent), "round", str(t)])
 
         df = pd.read_csv(output_poems + "inference_" + str(t) + ".csv")
-        if t - 1>=0:
+        if t - 2 >= 0:
+            dataset_path = output_poems + "inference_" + str(t - 2) + ".csv"
+            df_last = pd.read_csv(dataset_path)  # .sample(20)
+            df = pd.concat([df, df_last])
+            dataset_path = output_poems + "inference_" + str(t - 1) + ".csv"
+            df_last = pd.read_csv(dataset_path)  # .sample(20)
+            df = pd.concat([df, df_last])
+        elif t - 1>=0:
             dataset_path = output_poems + "inference_" + str(t - 1) + ".csv"
             df_last = pd.read_csv(dataset_path)  # .sample(20)
             df = pd.concat([df, df_last])
@@ -169,6 +183,9 @@ for t in range(9, n_loop):
         char = df["stanza"].apply(lambda x: [char.isalpha() for char in x])
         df["char_ratio"] = [sum(i) / len(i) for i in char]
         df = df[(df["char_ratio"]>0.4)]
+        df['unique'] = df.stanza.apply(lambda x: len(set(x.lower().split())) / len(x.lower().split()))
+        df["n_unique"] = df.stanza.apply(lambda x: len(set(x.lower().split())))
+        df = df[(df["unique"]>0.45) & (df["n_unique"] > 15)]
 
         if agent in [0, 1]:
             enemy = [2, 3]
@@ -176,7 +193,7 @@ for t in range(9, n_loop):
             enemy = [0, 1]
 
         df["mode"] = [-1 if i in enemy else 1 for i in df.agent]
-        poem_df = df[df["mode"] == 1].reset_index()
+        poem_df = df[df["mode"] == 1].sample(frac = 0.8).reset_index()
         poem_df = poem_df.fillna('')
         poem_df["generated"] = True
 
@@ -189,7 +206,7 @@ for t in range(9, n_loop):
 
             wandb.init(
                 # set the wandb project where this run will be logged
-                project="gpt-2-medium-inference-train",
+                project="gpt-2-medium-inference-train720",
                 # track hyperparameters and run metadata
                 config={
                     "learning_rate": model_config["learning_rate"],

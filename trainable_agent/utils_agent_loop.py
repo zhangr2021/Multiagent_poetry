@@ -13,6 +13,7 @@ from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model, Pe
 import argparse
 from utils_GPT2Head import *
 from utils_data import *
+from torchmetrics.functional import pairwise_cosine_similarity
 
 '''
 Loop & train functions
@@ -251,8 +252,24 @@ class agent_loop:
                 elif (loss_fct == "CE") & (masking == True):
                     loss = ce_loss
                 elif loss_fct == "contrastive":
-                    loss = self.contrastive_loss(outputs, b_mode, b_masks, tau=0.1)
+                    loss_ = torch.reshape(outputs.loss * shift_masks, (-1, 1))
+                    mode = b_mode.repeat(MAX_LEN - 1)
+                    loss_ = loss_[mode == 1]
+                    loss_ = loss_[loss_ != 0]
+                    ce_loss_ = loss_.mean()
+                    loss = (1-self.model_config["loss_fct_weight"]) * ce_loss_ + self.model_config["loss_fct_weight"] * self.contrastive_loss(outputs, b_mode, b_masks, tau=0.1)
+                elif loss_fct == "unlearning":
+                    loss_ = torch.reshape(outputs.loss * shift_masks, (-1, 1))
+                    mode = b_mode.repeat(MAX_LEN - 1)
+                    loss_ce = loss_[mode == 1]
+                    loss_ce = loss_ce[loss_ce != 0]
+                    ce_loss_ = loss_ce.mean()
 
+                    loss_ul = loss_[mode == -1]
+                    loss_ul = loss_ul[loss_ul != 0]
+                    ul_loss_ = loss_ul.mean()
+                    loss = (1-self.model_config["loss_fct_weight"]) * ce_loss_ - self.model_config["loss_fct_weight"] * ul_loss_
+                print("loss: ", loss)
                 ppl = torch.exp(loss)
                 if not torch.isinf(loss):
                     batch_loss = loss.item()
