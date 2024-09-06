@@ -120,7 +120,7 @@ def redistribute_search(model1, model2, tokenizer, input_ids, nagetive_dict, dev
             outputs4 = model4(input_ids)
             predictions4 = outputs4.logits
             logits4 = predictions4[0, -1, :]
-            next_token_logits = logits + alpha * logits3 - alpha * (logits2 + logits4)
+            next_token_logits = logits + alpha * logits3 - alpha * (logits2 + logits4)/2
 
     next_token_logits = next_token_logits / temperature
 
