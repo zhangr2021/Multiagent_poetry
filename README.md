@@ -15,8 +15,3 @@ We release our [generated poems](dataset/poems).
 To reproduce the evaluations conducted in this work, please check the folder [results for section datasets](results/section_datasets) and [results for section experiments](results/section_experiments).
 
 We provide code for both training-based [training-based](trainable_agents) and conventional frameworks  and [conversational](untrainable_agents). 
-
-## Contacts
-If you have any questions, feel free to contact us!
-
-Ran Zhang ([ran.zhang@uni-mannheim.de](mailto:ran.zhang@uni-mannheim.de))
