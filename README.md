@@ -8,3 +8,7 @@ non-cooperative environments](https://arxiv.org/abs/2409.03659).
 
 ## Experiments
 We provide code for both training-based [training-based](trainable_agents) and prompting-based agents [conversational](untrainable_agents). 
+
+## Coming soon:
+- LLM evaluation of poetry quality
+- Finetuning the dataset and LORAs to reproduce results (will host on other platforms due to large size)
